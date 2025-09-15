@@ -1,0 +1,22 @@
+/project
+  - include
+    - main.h
+  - lib
+    - StepperControl
+      - StepperControl.h
+      - StepperControl.cpp
+    - AudioManager
+      - AudioManager.h
+      - AudioManager.cpp
+    - LEDManager
+      - LEDManager.h
+      - LEDManager.cpp
+    - SerialManager
+      - SerialManager.h
+      - SerialManager.cpp
+    - GameControl
+      - GameControl.h
+      - GameControl.cpp
+  - src
+    - main.cpp
+  - platformio.ini
