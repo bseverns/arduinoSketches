@@ -56,6 +56,7 @@ Anything that moves, senses, or bosses motors around.
 ### Notes, Docs & Ephemera
 - `docs/`
   - Former stray PDFs now corralled into a single folder.
+  - See `docs/showcase.md` for wiring guides + BOMs on the crowd-pleasers.
 - `Notes_keke_siren/`, `ReferanceSketch/`, `SKY_PHONE_2/`
   - Mixed notes and iterations. Expect loose ends.
 
@@ -68,8 +69,8 @@ Anything that moves, senses, or bosses motors around.
 4. **Prototype fast**. This is a playground—fork the sketch, twist a knob, record what happens.
 
 ## Where to explore next
-- Tighten the best-performing sketches into showcase-ready demos with photos or wiring diagrams.
+- Tighten the best-performing sketches into showcase-ready demos with photos or wiring diagrams. `docs/showcase.md` has TODO slots waiting for media drops.
 - Document unexpected tricks (timer sharing, ISR gotchas) directly in the sketches.
-- Trade polished recordings for commit history: drop audio snippets or GIFs into `docs/` to complement the code.
+- Trade polished recordings for commit history: drop audio snippets or GIFs into `docs/` to complement the code. Call your shot with TODO notes until the binary files land.
 
 Questions? Crack open the serial monitor, read the comments, and don’t be afraid to get weird—but keep it useful.
