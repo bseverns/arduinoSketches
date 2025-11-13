@@ -51,11 +51,18 @@ AutoMap kMapModSpeed(0,1023,MIN_MOD_SPEED,MAX_MOD_SPEED);
 AutoMap mapThis(0,1023,MIN,MAX);
 AutoMap mapThisToo(0,1023,MIN_2,MAX_2);
 
-const int KNOB_PIN = 0; // set the input for the knob to analog pin 0
-const int 1_PIN=1; // set the analog input for fm_intensity to pin 1
-const int 2_PIN=2; // set the analog input for mod rate to pin 2
-const int 3_PIN=4; //freq2 
-const int 4_PIN=3; //frequency value
+// --- Control surface wiring ---
+// A0: main pitch knob controlling the carrier frequency.
+// A1: FM depth knob (feedback/brightness).
+// A2: LFO rate knob for modulation-speed control.
+// A3: Texture knob that scales modulation depth in the fm_intensity calc.
+// A4: Harmonic multiplier knob nudging the modulator/carrier ratio.
+
+const int KNOB_PIN = 0;           // carrier pitch
+const int FM_INTENSITY_PIN = 1;   // FM intensity control
+const int MOD_SPEED_PIN = 2;      // LFO speed
+const int TEXTURE_PIN = 3;        // secondary depth/timbre scaler
+const int RATIO_PIN = 4;          // harmonic ratio multiplier
 
 Oscil<COS2048_NUM_CELLS, AUDIO_RATE> aCarrier(COS2048_DATA);
 Oscil<COS2048_NUM_CELLS, AUDIO_RATE> aModulator(COS2048_DATA);
@@ -69,17 +76,17 @@ float smoothness = 0.95f;
 Smooth <long> aSmoothIntensity(smoothness);
 
 void setup(){
-  Serial.begin(115200); // set up the Serial output so we can look at the light level
+  Serial.begin(115200); // set up the Serial output so we can watch the controls breathe
   startMozzi(); // :))
 }
 
 void updateControl(){
     
-   int freqVal = mozziAnalogRead(LDR3_PIN); // value is 0-1023
-   int FRQ = mapThis(freqVal);
-   
-   int knob2 = mozziAnalogRead(LDR4_PIN); // value is 0-1023
-   int knob2Val = mapThis(knob2);
+  int ratio_knob = mozziAnalogRead(RATIO_PIN); // value is 0-1023
+  int ratio_multiplier = mapThis(ratio_knob);
+
+  int texture_knob = mozziAnalogRead(TEXTURE_PIN); // value is 0-1023
+  int texture_multiplier = mapThisToo(texture_knob);
   
   // read the knob
   int knob_value = mozziAnalogRead(KNOB_PIN); // value is 0-1023
@@ -88,14 +95,14 @@ void updateControl(){
   int carrier_freq = kMapCarrierFreq(knob_value);
   
   //calculate the modulation frequency to stay in ratio
-  int mod_freq = carrier_freq * mod_ratio * FRQ;
+  int mod_freq = carrier_freq * mod_ratio * ratio_multiplier;
   
   // set the FM oscillator frequencies
   aCarrier.setFreq(carrier_freq); 
   aModulator.setFreq(mod_freq);
   
-  // read the light dependent resistor on the width Analog input pin
-  int pot1_value= mozziAnalogRead(1_PIN); // value is 0-1023
+  // read the FM depth control (A1)
+  int pot1_value= mozziAnalogRead(FM_INTENSITY_PIN); // value is 0-1023
   // print the value to the Serial monitor for debugging
   Serial.print("pot1 = "); 
   Serial.print(pot1_value);
@@ -106,14 +113,14 @@ void updateControl(){
   Serial.print(pot1_calibrated);
   Serial.print("\t"); // prints a tab
   
- // calculate the fm_intensity
-  fm_intensity = ((long)pot1_calibrated * knob2Val * (kIntensityMod.next()+128))>>8; // shift back to range after 8 bit multiply
+  // calculate the fm_intensity using the secondary texture control and LFO
+  fm_intensity = ((long)pot1_calibrated * texture_multiplier * (kIntensityMod.next()+128))>>8; // shift back to range after 8 bit multiply
   Serial.print("fm_intensity = ");
   Serial.print(fm_intensity);
   Serial.print("\t"); // prints a tab
   
-  // read the light dependent resistor on the speed Analog input pin
-  int pot2_value= mozziAnalogRead(2_PIN); // value is 0-1023
+  // read the modulation-speed control (A2)
+  int pot2_value= mozziAnalogRead(MOD_SPEED_PIN); // value is 0-1023
   Serial.print("pot2 = "); 
   Serial.print(pot2_value);
   Serial.print("\t"); // prints a tab
