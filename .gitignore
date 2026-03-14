@@ -1,6 +1,23 @@
 .DS_Store
-.DS_Store
-drumkid-master/.DS_Store
-ROLLER_f/.DS_Store
-tiny85audioplayer/.DS_Store
-wavehc/.DS_Store
+Thumbs.db
+
+# Arduino build output
+*.o
+*.d
+*.eep
+*.elf
+*.hex
+*.bin
+*.map
+
+# Legacy Arduino IDE / Processing build folders
+applet/
+build/
+
+# Editor and OS noise
+.vscode/
+*.swp
+*.swo
+
+# Common large local archives and exports
+*.zip
