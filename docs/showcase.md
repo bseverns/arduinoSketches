@@ -159,8 +159,167 @@ Remember: share grounds between Arduino and the external 5V relay supply, otherw
 
 ---
 
+## Hallway Reactor 2 m (folder: `holding/modern-platformio-demos/hallway_reactor_2m`)
+
+**Intent**: Three ToF sensors infer entry direction across a hallway and turn a 2 m LED strip into comet, bloom, and dwell states.
+
+**Bill of Materials**
+- Arduino Uno or Nano
+- 3 × VL53L1X distance sensors
+- 1 × 2 m WS2812B strip, about 120 px total
+- 1 × 5V power supply sized for the strip
+- 1 × quiet-hours toggle switch
+- Diffuser channel or smoked acrylic cover
+
+**Wiring Cheat Sheet**
+| Signal | Arduino Pin | Notes |
+| --- | --- | --- |
+| LED Data | D6 | NeoPixel data line |
+| XSHUT East | D2 | Used to assign sensor I2C address |
+| XSHUT Mid | D3 | Used to assign sensor I2C address |
+| XSHUT West | D4 | Used to assign sensor I2C address |
+| Quiet Switch | D7 | Internal pull-up enabled, active LOW |
+| I2C SDA | A4 | Shared across all three sensors |
+| I2C SCL | A5 | Shared across all three sensors |
+| LED Power | External 5V | Share ground with the Arduino |
+
+```
+East sensor ----\
+Mid sensor  ----- I2C bus ---- Uno/Nano ---- D6 ---- 2 m LED strip
+West sensor ----/
+
+XSHUT pins on D2/D3/D4 let each VL53L1X boot one-by-one with a unique address.
+```
+
+**Performance Notes**
+- The install works best when the sensors are slightly baffled so they read the hallway, not each other.
+- Diffusion matters more than raw brightness; a soft comet read is what sells the piece.
+- This is one of the clearest audience-facing sketches in the repo because the behavior is visible from across the room.
+
+**Media TODOs**
+- TODO: Add hallway mounting diagram at `docs/images/hallway_reactor_2m_layout.svg`.
+- TODO: Capture an entry-direction demo clip at `docs/gifs/hallway_reactor_comet.gif`.
+- TODO: Record a short install walkthrough at `docs/video/hallway_reactor_demo.mp4`.
+
+---
+
+## LineLight Band Lamp (folder: `holding/modern-platformio-demos/linelight_band_lamp`)
+
+**Intent**: A single lamp listens to line-level audio, isolates a tunable FFT band, and glows with smoothed, gain-controlled intensity.
+
+**Bill of Materials**
+- SparkFun Pro Mini 5V/16 MHz or similar ATmega328P board
+- 2 × 10k linear potentiometers
+- 1 × lamp or LED fixture driven by a MOSFET
+- 1 × audio input bias/filter front end
+- FTDI Basic or similar serial uploader
+- External lamp power supply sized for the load
+
+**Wiring Cheat Sheet**
+| Signal | Arduino Pin | Notes |
+| --- | --- | --- |
+| Audio In | A0 | AC-coupled and biased around mid-rail |
+| Low Band Pot | A1 | Chooses low FFT edge |
+| High Band Pot | A2 | Chooses high FFT edge |
+| PWM Out | D9 | Timer1 OC1A high-frequency PWM |
+| Lamp Ground | GND | Share with the external driver stage |
+
+```
+Audio source -> bias + filter front end -> A0
+Pot 1 wiper -> A1
+Pot 2 wiper -> A2
+D9 -> MOSFET gate/driver -> lamp
+```
+
+**Performance Notes**
+- This one is showcase material because the hardware is small but the response feels more sophisticated than “audio reactive lights.”
+- The AGC and smoothing make it forgiving in live demos where source levels vary a lot.
+- Keep the serial monitor handy when tuning thresholds; the bin and AGC printouts are part of the charm.
+
+**Media TODOs**
+- TODO: Add band-lamp wiring sheet at `docs/images/linelight_band_lamp_wiring.svg`.
+- TODO: Record a frequency-sweep demo at `docs/audio/linelight_band_sweep.wav`.
+- TODO: Capture a side-by-side pot interaction clip at `docs/gifs/linelight_pot_sweep.gif`.
+
+---
+
+## MOARkNOBS Button + Envelope Demo (folder: `holding/modern-platformio-demos/moarknobs_button_ef_usb_midi_demo`)
+
+**Intent**: Tiny Teensy control-surface demo: one button fires a note and one envelope follower emits MIDI CC, enough to explain the bigger rig in miniature.
+
+**Bill of Materials**
+- Teensy 4.0
+- 1 × momentary push button
+- 1 × envelope follower output or control-voltage source
+- USB connection to a laptop or synth host
+- Breadboard + jumper wires
+
+**Wiring Cheat Sheet**
+| Signal | Teensy Pin | Notes |
+| --- | --- | --- |
+| Button | D12 | Active LOW, internal pull-up |
+| Envelope Input | A0 | 0-3.3V analog source |
+| USB MIDI | USB | Sends note and CC data |
+
+```
+Button -> D12 to GND
+Envelope follower out -> A0
+Teensy USB -> laptop running a MIDI monitor or synth
+```
+
+**Performance Notes**
+- This is a great workshop sketch because the concept lands immediately and the whole rig fits on a breadboard.
+- It is also a strong “explain the larger controller by shrinking it” demo.
+- Keep the input quiet during boot so the baseline calibration settles cleanly.
+
+**Media TODOs**
+- TODO: Add breadboard layout at `docs/images/moarknobs_button_ef_demo_bb.png`.
+- TODO: Record MIDI monitor capture at `docs/video/moarknobs_button_ef_demo.mp4`.
+- TODO: Add a simple patch example at `docs/audio/moarknobs_button_ef_demo_usage.wav`.
+
+---
+
+## Horizon Preset Morph (folder: `holding/modern-platformio-demos/horizon_preset_morph`)
+
+**Intent**: Self-running stereo widening and mastering demo that slowly morphs between two contrasting Horizon scenes so the audience can hear the processor breathe without touching a control.
+
+**Bill of Materials**
+- Teensy 4.0 or 4.1
+- PJRC Audio Shield
+- Stereo line-level source
+- Headphones, powered speakers, or a mixer return
+- USB cable for power and serial logging
+- Breadboard or simple shield stack mounting
+
+**Wiring Cheat Sheet**
+| Signal | Teensy / Shield Pin | Notes |
+| --- | --- | --- |
+| Audio Input L/R | Audio Shield line in | Feed stereo program material |
+| Audio Output L/R | Audio Shield headphone or line out | Monitor the morphing scenes |
+| SGTL5000 control | Default I2C pins | Handled by the Audio Shield wiring |
+| USB | USB | Power + optional serial preset logs |
+
+```
+Stereo source -> Audio Shield line in
+Teensy + Horizon sketch
+Audio Shield out -> headphones / mixer / powered speakers
+
+No front-panel controls required for the demo surface.
+```
+
+**Performance Notes**
+- This is a strong bench demo because it performs by itself once audio is running.
+- The contrast between the wide "Cinema Morph" scene and the steadier "Bus Pillow" scene reads clearly even in a short listening test.
+- Use dense stereo material, pads, or full mixes rather than dry mono signals; the effect is much easier to hear when the source has spatial content.
+
+**Media TODOs**
+- TODO: Add simple signal-flow card at `docs/images/horizon_preset_morph_signal_flow.svg`.
+- TODO: Record before/after scene cycle at `docs/audio/horizon_preset_morph_cycle.wav`.
+- TODO: Capture serial + audio bench clip at `docs/video/horizon_preset_morph_demo.mp4`.
+
+---
+
 ### Next Steps
 - As you tighten each build, commit the missing media to the placeholder paths above.
 - If a build graduates to a full installation, spin up a dedicated folder under `docs/` with process shots, BOM sourcing links, and troubleshooting logs.
 - Keep chasing utility: document the choices that helped the sketch behave in the wild.
-

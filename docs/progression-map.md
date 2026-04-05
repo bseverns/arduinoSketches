@@ -73,6 +73,10 @@ These do not yet show a clear lineage, but they already belong together conceptu
 
 `holding/uncategorized/glitchamin`, `holding/uncategorized/Musicator`, `holding/uncategorized/mP1`, `holding/uncategorized/IllutronBDemo0_2`, `holding/uncategorized/Jingle_Hell__Saturnalia_`, `holding/uncategorized/MozziSynth_example1`
 
+### Modern PlatformIO demo snapshots
+
+`holding/modern-platformio-demos/moarknobs_button_ef_usb_midi_demo`, `holding/modern-platformio-demos/diceloop_rough_prototype`, `holding/modern-platformio-demos/hallway_reactor_2m`, `holding/modern-platformio-demos/linelight_band_lamp`, `holding/modern-platformio-demos/motorlightsound_lane_controller`, `holding/modern-platformio-demos/dust_press_minimal`, `holding/modern-platformio-demos/horizon_minimal`, `holding/modern-platformio-demos/rhythm_weave_minimal`, `holding/modern-platformio-demos/tide_engine_minimal`, `holding/modern-platformio-demos/orbit_looper_minimal`, `holding/modern-platformio-demos/silt_minimal`, `holding/modern-platformio-demos/dust_press_presets_demo`, `holding/modern-platformio-demos/horizon_preset_morph`, `holding/modern-platformio-demos/horizon_scope_demo`, `holding/modern-platformio-demos/tide_engine_teaching_rig`, `holding/modern-platformio-demos/tide_engine_humanize_demo`
+
 ### Motion / relay / mechanism control
 
 `experiments/robotics/relay-control/dbSabertoothshield_1`, `experiments/robotics/relay-control/dbMSr3`, `experiments/robotics/relay-control/dbrough`, `experiments/robotics/relay-control/sP_relay1`, `experiments/robotics/relay-control/sP_relay2`, `experiments/robotics/relay-control/sP_relay3`
