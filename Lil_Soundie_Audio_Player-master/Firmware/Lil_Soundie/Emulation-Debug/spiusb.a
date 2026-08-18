@@ -1,0 +1,2096 @@
+
+//_____________________________________________________________
+//
+	.sect code,MyInitUSBDescriptors	// 23 words
+	.export _MyInitUSBDescriptors
+_MyInitUSBDescriptors:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A0,(I6)+1 ; sty I0,(I6)
+	sub NULL,ONES,A0	// 1 -> 1 -> ET0
+//   RealInitUSBDescriptors (1);
+	call _RealInitUSBDescriptors
+	stx A0,(I6)	// ET0
+// jumped away
+	ldc _myVendorNameStr,A0	// ET1
+	ldc _USB+1,I0	// ET4
+	stx A0,(I0)+1 ; ldy (I6)-1,NULL	// I6 += -1
+//   USB.descriptorTable[1] = myVendorNameStr;
+//   USB.descriptorTable[2] = myModelNameStr;
+	ldc _myModelNameStr,A0	// ET5
+	stx A0,(I0)+1	// ET5 ==> ET4
+//   USB.descriptorTable[3] = mySerialNumberStr;
+	ldc _mySerialNumberStr,A0	// ET8
+	stx A0,(I0)+1	// ET8 ==> ET4
+//   USB.descriptorTable[4] = myDeviceDescriptor;
+	ldc _myDeviceDescriptor,A0	// ETb
+	stx A0,(I0) ; ldy (I6),I0	// ETb ==> ET4
+	ldx (I6)-1,A0
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,SingleCycleCommand	// 21 words
+	.export _SingleCycleCommand
+_SingleCycleCommand:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A0,(I6) ; sty A1,(I6)+1
+	ldc 46,A0	// 46 -> 1 -> ET2
+	ldc 47,A1	// 47 -> 1 -> ET0
+	stx I0,(I6)+1 ; ldy (I4)-2,NULL
+	ldc 49256,I0	// 49256 -> ET1
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	stx A1,(I0)/*V*/	// ET0 ==> ET1
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(0<<0);
+	stx A0,(I0)/*V*/	// ET2 ==> ET1
+//   SpiSendReceive (cmd);
+	call _SpiSendReceive
+	ldx (I4)+2,A0	// unspill 'cmd' from #0
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	stx A1,(I0)/*V*/	// ET0 ==> ET1
+	ldx (I6)-1,I0
+	ldy (I6),A1 ; ldx (I6)-1,A0
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,SpiWaitStatus	// 45 words
+	.export _SpiWaitStatus
+_SpiWaitStatus:
+	ldc 47,A0	// 47 -> 1 -> ET0
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	stx B1,(I6)+1 ; sty I0,(I6)
+// *(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 49256,I0	// 49256 -> ET1
+	stx A0,(I0)/*V*/	// ET0 ==> ET1
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(0<<0);
+	ldc 46,A0	// 46 -> 1 -> ET2
+	stx A0,(I0)/*V*/	// ET2 ==> ET1
+//   SpiSendReceive (0x05);
+	call _SpiSendReceive
+	ldc 5,A0	// 5 -> A0
+// jumped away
+	ldc 49282,I0	// 49282 -> ET7
+	sub NULL,ONES,A1	// 1 -> 1 -> ETd
+	j F2B4
+	ldc 32768,B0	// 32768 -> 1 -> ETa
+// jumped away
+F2B9:	// (loop lvl 2)
+	and A0,A1,B1	// 'status' and ETd -> ETe
+	nop
+	jzs F2B5	// compare against zero
+	nop
+// jumped away
+F2B4:	// (loop lvl 2)
+//   }
+//   do
+//   {
+//     status = SpiSendReceive (0);
+	call _SpiSendReceive
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// 0 -> A0
+// jumped away
+//     if ((*(__x volatile u_int16 *)(u_int16)((0xC080U +2))) &(1<<15))
+	ldx (I0),B1/*V*/	// ET7 ==> ET8
+	and B1,B0,B1	// ET8 and ETa -> ETb
+	nop
+	jzs F2B9	// compare against zero
+	nop
+// jumped away
+//     }
+//     {
+//       USBHandler ();
+	call _USBHandler
+	nop
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 47,A0	// 47 -> 1 -> ET0
+	ldc 49256,I0	// 49256 -> ET1
+	stx A0,(I0)/*V*/	// ET0 ==> ET1
+//       return -1;
+	ldc 65535,A0	// 65535 -> 1 -> ETc
+F2B1:
+	ldy (I6),I0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+F2B5:
+//   ;
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 47,A1	// 47 -> 1 -> ET0
+	ldc 49256,I0	// 49256 -> ET1
+//   return status;
+	j F2B1
+	stx A1,(I0)/*V*/	// ET0 ==> ET1
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,EeUnprotect	// 29 words
+	.export _EeUnprotect
+_EeUnprotect:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A0,(I6) ; sty A1,(I6)+1
+	ldc 6,A1	// 6 -> 1 -> ET0
+	ldc 46,A0	// 46 -> 1 -> ET1
+	stx I0,(I6)+1
+//   SingleCycleCommand (0x06);
+	ldc 49256,I0	// 49256 -> ET2
+	call _SingleCycleCommand
+	stx A1,(I6)	// ET0
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(0<<0);
+//   SpiSendReceive (0x01);
+	call _SpiSendReceive
+	stx A0,(I0)/*V*/ ; sub NULL,ONES,A0	// I6 += -1
+// jumped away
+//   SpiSendReceive (0x02);
+	ldc 2,A0	// 2 -> A0
+	call _SpiSendReceive
+	ldx (I6)+1,NULL	// I6 += 1
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 47,A0	// 47 -> 1 -> ET7
+//   SpiWaitStatus ();
+	call _SpiWaitStatus
+	stx A0,(I0)/*V*/ ; ldy (I6)+1,NULL	// ET7 ==> ET2
+// jumped away
+//   SingleCycleCommand (0x06);
+	call _SingleCycleCommand
+	stx A1,(I6)	// ET0
+// jumped away
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,I0
+	ldy (I6),A1 ; ldx (I6)-1,A0
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,EePutReadBlockAddress	// 34 words
+	.export _EePutReadBlockAddress
+_EePutReadBlockAddress:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A0,(I6) ; sty A1,(I6)+1
+	ldc 46,A0	// 46 -> 1 -> ET0
+	stx B0,(I6) ; sty B1,(I6)+1
+	stx I0,(I6)+1 ; add C0,NULL,A1
+	ldc 49256,I0	// 49256 -> ET1
+	stx A0,(I0)/*V*/	// C0 -> 'blockn'
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(0<<0);
+//   SpiSendReceive (0x03);
+	call _SpiSendReceive
+	ldc 3,A0	// 3 -> A0
+// jumped away
+//   SpiSendReceive (blockn >> 7);
+	ldc 0,B1
+	ldc -7,A0	// -7 -> 0 -> ET5
+	add A1,NULL,B0 ; ldx (I6)+1,NULL	// 'blockn' msw AT10
+	ashl B,A0,B	// AT10 <- ET5 -> AT11
+	call _SpiSendReceive
+	add B0,NULL,A0	// ET6 -> A0
+// jumped away
+//   SpiSendReceive ((blockn << 1) & 0xff);
+	ldc 255,A0	// 255 -> 1 -> ETa
+	add A1,A1,A1 ; ldx (I6)+1,NULL	// 'blockn' >> (-1) -> ET9
+	call _SpiSendReceive
+	and A1,A0,A0	// ET9 and ETa -> ETb
+// jumped away
+//   SpiSendReceive (0);
+	call _SpiSendReceive
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// 0 -> A0
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(15<<1) |(0<<0);
+	ldc 62,A0	// 62 -> 1 -> ETf
+	stx A0,(I0)/*V*/	// ETf ==> ET1
+	ldx (I6)-1,I0
+	ldy (I6),B1 ; ldx (I6)-1,B0
+	ldy (I6),A1 ; ldx (I6)-1,A0
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,EeIsBlockErased	// 37 words
+	.export _EeIsBlockErased
+_EeIsBlockErased:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	ldc 0,A1	// 0 -> 'n'
+	ldc 65535,B0	// 65535 -> 1 -> ET4
+	stx B1,(I6) ; sty C0,(I6)+1
+//   SpiWaitStatus ();
+	call _SpiWaitStatus
+	stx I0,(I6) ; ldy (I4)-2,NULL
+// jumped away
+//   EePutReadBlockAddress (blockn);
+	call _EePutReadBlockAddress
+	ldx (I4)+2,C0	// unspill 'blockn' from #0
+// jumped away
+//   }
+// (n = 0; n < 2048; n++)
+	j F5B8
+	ldc 2048,B1	// 2048 -> 1 -> ET2
+// jumped away
+F5B5:	// (loop lvl 2)
+//     }
+//     {
+//       if (SpiSendReceive (0) != 0xffff)
+	call _SpiSendReceive
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// 0 -> A0
+// jumped away
+	sub A0,B0,A0	// ET3 != ET4 -> ATd
+	ldc 47,A0	// 47 -> 1 -> ET5
+	jzc F5B9	// unsigned compare
+	sub A1,ONES,A1	// 'n' - (-1) -> 'n'
+// jumped away
+F5B8:	// (loop lvl 2)
+	sub A1,B1,A0	// 'n' < ET2 -> ATb
+	ldc 47,A0	// 47 -> 1 -> ET5
+	jcc F5B5	// unsigned compare
+	nop
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 49256,I0	// 49256 -> ET6
+//     return 1;
+	j F5B1
+	stx A0,(I0)/*V*/ ; sub NULL,ONES,A0	// ET5 ==> ET6
+// jumped away
+F5B9:
+//       }
+//       {
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 49256,I0	// 49256 -> ET6
+	stx A0,(I0)/*V*/ ; and NULL,NULL,A0	// ET5 ==> ET6
+//         return 0;
+F5B1:
+	ldx (I6)-1,I0
+	ldy (I6),C0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,EeProgram4K	// 169 words
+	.export _EeProgram4K
+_EeProgram4K:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+5,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	stx B1,(I6) ; sub NULL,ONES,A1	// 1 -> 1 -> ET0
+	sty C0,(I6)+1 ; ldx (I4)-2,NULL
+	stx C1,(I6) ; sty D0,(I6)+1
+	stx D1,(I6) ; sty I0,(I6)+1
+	ldc 49299,I0	// 49299 -> ET1
+	stx I2,(I6) ; sty LC,(I6)+1
+	stx LS,(I6)+1 ; sty LE,(I6)
+	ldx (I0),A0/*V*/	// I4 += -2
+// (*(__x volatile u_int16 *)(u_int16)((0xC080U +19))) |= (0x0001);
+	or A0,A1,A0	// ET2 or ET0 -> ET3
+	stx A0,(I0)/*V*/	// ET3 ==> ET1
+// ;
+// ;
+//   if (!EeIsBlockErased (blockn))
+	ldx (I4)+2,A1	// unspill AT51 from #-2
+	call _EeIsBlockErased
+	stx A1,(I6)	// AT51
+// jumped away
+	sub A0,NULL,A0	// I6 += -1
+	ldc 6,A0	// 6 -> 1 -> ET5
+	jzs F6B3	// unsigned compare
+	ldc 49256,I0	// 49256 -> ET8
+// jumped away
+	ldx (I6)-1,NULL
+F6B4:
+//   if (SpiWaitStatus () == -1)
+	call _SpiWaitStatus
+	nop
+// jumped away
+	mv A0,B0	// A0 -> ET17
+	ldc 65535,A0	// 65535 -> 1 -> ET18
+	sub B0,A0,B0	// ET17 != ET18 -> AT41
+	ldc 1,A0
+	jzc F6B14	// unsigned compare
+	ldc 49256,I0
+// jumped away
+//     return -1;
+	or NULL,ONES,A0	// -1 -> 0 -> ET19
+F6B1:
+	ldy (I6),LE ; ldx (I6)-1,LS
+	ldy (I6),LC ; ldx (I6)-1,I2
+	ldy (I6),I0 ; ldx (I6)-1,D1
+	ldy (I6),D0 ; ldx (I6)-1,C1
+	ldy (I6),C0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+//   }
+// (i = 0; i < 8; i++)
+	ldc 49256,I0	// 49256 -> ET8
+	sub NULL,ONES,A0	// 1 -> 0 -> ETf
+F6B14:
+	ldc 62,D0	// 62 -> 1 -> ET20
+	ldc 255,C1	// 255 -> 1 -> ET11
+	ldc -7,C0	// -7 -> 0 -> ETc
+	ldc 46,B1	// 46 -> 1 -> ET7
+	ldx (I4)+1,NULL ; and NULL,NULL,B0	// 0 -> 'i'
+	stx A0,(I4)-4 ; sub B1,ONES,D1	// ETf spills to #0
+	j F6B19
+	ldx (I4)+3,I2
+// jumped away
+F6B59:	// (loop lvl 2)
+//       EeUnprotect ();
+	call _EeUnprotect
+	ldy (I4)-1,A1	// unspill AT55 from #1
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(0<<0);
+//       SpiSendReceive (0x02);
+	call _SpiSendReceive
+	stx B1,(I0)/*V*/ ; ldy (I6)+1,NULL	// ET7 ==> ET8
+// jumped away
+	ldx (I4)+2,NULL ; ldy (I6)+1,NULL	// I4 += 2
+	stx D0,(I4) ; sty D1,(I4)+1	// D0 spills to #0
+	ldc 0,D1
+	stx B0,(I4) ; sty B1,(I4) ; add A1,NULL,D0	// B0 spills to #0
+//       SpiSendReceive (blockn >> 7);
+	ashl D,C0,B	// AT48 <- ETc -> AT49
+	add B0,NULL,A0 ; ldx (I4),B0	// AT49 lsw ETd
+	ldy (I4)-1,B1	// unspill B1 from #0
+	call _SpiSendReceive
+	ldx (I4),D0 ; ldy (I4)-2,D1	// unspill D0 from #0
+// jumped away
+//       SpiSendReceive (((blockn << 1) + 1) & 0xff);
+	add A1,A1,A0 ; ldx (I6)+1,NULL	// AT51 >> (-1) -> ET10
+	sub A0,ONES,A0	// ET10 - (-1) -> ET2d
+	call _SpiSendReceive
+	and A0,C1,A0	// ET2d and ET11 -> ET2e
+// jumped away
+//       SpiSendReceive (0);
+	call _SpiSendReceive
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// 0 -> A0
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(15<<1) |(0<<0);
+	ldc 127,LC	// loop 128 iterations
+//       }
+// (n = 0; n < 128; n++)
+	stx D0,(I0)/*V*/ ; ldy (I2)+1,A0	// ET20 ==> ET8
+	loop LC,F6B39-1
+	ldx (I6)+1,NULL	// AT4f ==> ET25
+//loop resumes
+//         }
+//         {
+//           SpiSendReceive (~(*dptr++));
+	call _SpiSendReceive
+	xor A0,ONES,A0	// ET25 xor (-1) -> ET26
+// jumped away
+	ldy (I2)+1,A0 ; ldx (I6)+1,NULL
+//	(0 nop's needed)
+// loop end
+F6B39:	// loop exit
+	stx D1,(I0)/*V*/ ; ldy (I2)-1,NULL
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+//       if (SpiWaitStatus () == -1)
+	call _SpiWaitStatus
+	ldy (I6)-1,NULL ; ldx (I4)+1,NULL	// I4 += 1
+// jumped away
+	sty A1,(I4)-1 ; add A0,NULL,A1	// AT58 spills to #1
+	ldc 65535,A0	// 65535 -> ET18
+	sub A1,A0,A0	// ET34 == ET18 -> AT4b
+	nop	// I4 += 1
+	jzs F6B60	// unsigned compare
+	nop	// unspill AT58 from #1
+// jumped away
+	ldx (I4)+1,NULL ; sub B0,ONES,B0	// I4 += 1
+	ldy (I4)-1,A1	// unspill AT58 from #1
+//       blockn++;
+	sub A1,ONES,A1	// AT51 - (-1) -> AT51
+F6B19:	// (loop lvl 2)
+	ldc 8,A0	// 8 -> ET1a
+	sub B0,A0,A0	// 'i' >= ET1a -> AT43
+	nop
+	jcs F6B17	// unsigned compare
+	nop
+// jumped away
+//     }
+//     {
+//       EeUnprotect ();
+	call _EeUnprotect
+	ldc 2,A0	// 2 -> A0
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(0<<0);
+//       SpiSendReceive (0x02);
+	call _SpiSendReceive
+	stx B1,(I0)/*V*/ ; ldy (I6)+1,NULL	// ET7 ==> ET8
+// jumped away
+	ldx (I4)+2,NULL ; ldy (I6)+1,NULL	// I4 += 2
+	stx D0,(I4) ; sty D1,(I4)+1	// D0 spills to #0
+	ldc 0,D1
+	stx B0,(I4) ; sty B1,(I4) ; add A1,NULL,D0	// B0 spills to #0
+//       SpiSendReceive (blockn >> 7);
+	ashl D,C0,B	// AT44 <- ETc -> AT45
+	add B0,NULL,A0 ; ldx (I4),B0	// AT45 lsw ETd
+	ldy (I4)-1,B1	// unspill B1 from #0
+	call _SpiSendReceive
+	ldx (I4),D0 ; ldy (I4)-2,D1	// unspill D0 from #0
+// jumped away
+//       SpiSendReceive ((blockn << 1) & 0xff);
+	add A1,A1,A0 ; ldx (I6)+1,NULL	// AT51 >> (-1) -> ET10
+	call _SpiSendReceive
+	and A0,C1,A0	// ET10 and ET11 -> ET12
+// jumped away
+//       SpiSendReceive (0);
+	call _SpiSendReceive
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// 0 -> A0
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(15<<1) |(0<<0);
+	ldc 127,LC	// loop 128 iterations
+//       }
+// (n = 0; n < 128; n++)
+	stx D0,(I0)/*V*/ ; ldy (I4)+1,NULL	// ET20 ==> ET8
+	loop LC,F6B26-1
+	ldy (I6)+1,NULL	// I4 += 1
+//loop resumes
+	sty A1,(I4)	// AT54 spills to #1
+//         }
+//         {
+//           SpiSendReceive (~(*dptr++));
+	ldy (I2)+1,A0	// AT4f ==> ET24
+	xor A0,ONES,A0	// ET24 xor (-1) -> ET26
+	sub NULL,ONES,A1	// 1 -> 0 -> ETf
+	call _SpiSendReceive
+	stx A1,(I4) ; ldy (I4)-1,A1	// ETf spills to #0
+// jumped away
+	ldx (I4)+1,NULL ; ldy (I6)+1,NULL
+//	(0 nop's needed)
+// loop end
+F6B26:	// loop exit
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+//       if (SpiWaitStatus () == -1)
+	call _SpiWaitStatus
+	stx D1,(I0)/*V*/ ; ldy (I6)-1,NULL
+// jumped away
+	sty A1,(I4) ; add A0,NULL,A1	// AT55 spills to #1
+	ldc 65535,A0	// 65535 -> ET18
+	sub A1,A0,A0	// ET2a != ET18 -> AT47
+	ldc 2,A0	// 2 -> A0
+	jzc F6B59	// unsigned compare
+	nop
+// jumped away
+//         return -1;
+	j F6B1
+	ldx (I4)-1,NULL ; or NULL,ONES,A0
+// jumped away
+F6B17:
+// ;
+// (*(__x volatile u_int16 *)(u_int16)((0xC080U +19))) &= ~(0x0001);
+	ldc 65534,A1	// 65534 -> 1 -> ET39
+	ldc 49299,I0	// 49299 -> ET1
+	ldx (I0),A0/*V*/	// ET1 ==> ET3a
+	and A0,A1,A0	// ET3a and ET39 -> ET3b
+//   return 0;
+	j F6B1
+	stx A0,(I0)/*V*/ ; and NULL,NULL,A0	// ET3b ==> ET1
+// jumped away
+F6B60:	// (loop lvl 2)
+//         return -1;
+	j F6B1
+	or NULL,ONES,A0	// -1 -> 0 -> ET19
+// jumped away
+F6B3:
+//   }
+//   {
+//     SingleCycleCommand (0x06);
+	call _SingleCycleCommand
+	stx A0,(I6)	// ET5
+// jumped away
+	ldc 48,A0	// 48 -> 1 -> ET6
+//     SingleCycleCommand (0x30);
+	call _SingleCycleCommand
+	stx A0,(I6)	// I6 += 1
+// jumped away
+//     EeUnprotect ();
+	ldc 46,A0	// 46 -> 1 -> ET7
+	call _EeUnprotect
+	ldx (I6)-1,NULL	// I6 += -1
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(0<<0);
+	stx A0,(I0)/*V*/ ; ldy (I6)+1,NULL	// ET7 ==> ET8
+//     SpiSendReceive (0x20);
+	call _SpiSendReceive
+	ldc 32,A0	// 32 -> A0
+// jumped away
+//     SpiSendReceive (blockn >> 7);
+	ldc 0,B1
+	ldc -7,A0	// -7 -> 0 -> ETc
+	add A1,NULL,B0 ; ldx (I6)+1,NULL	// AT51 msw AT3e
+	ashl B,A0,B	// AT3e <- ETc -> AT3f
+	call _SpiSendReceive
+	add B0,NULL,A0	// ETd -> A0
+// jumped away
+//     SpiSendReceive ((blockn << 1) & 0xff);
+	ldc 255,A0	// 255 -> 1 -> ET11
+	add A1,A1,B0 ; ldx (I6)+1,NULL	// AT51 >> (-1) -> ET10
+	call _SpiSendReceive
+	and B0,A0,A0	// ET10 and ET11 -> ET12
+// jumped away
+//     SpiSendReceive (0);
+	call _SpiSendReceive
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// 0 -> A0
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 47,A0	// 47 -> 1 -> ET16
+	j F6B4
+	stx A0,(I0)/*V*/	// ET16 ==> ET8
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,EeReadBlock	// 29 words
+	.export _EeReadBlock
+_EeReadBlock:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx C0,(I6) ; sty I0,(I6)+1
+	stx LC,(I6) ; sty LS,(I6)+1
+//   SpiWaitStatus ();
+	call _SpiWaitStatus
+	stx LE,(I6) ; ldy (I4)-2,NULL
+// jumped away
+//   EePutReadBlockAddress (blockn);
+	call _EePutReadBlockAddress
+	ldx (I4)+2,C0	// unspill 'blockn' from #0
+// jumped away
+	ldc 255,LC	// loop 256 iterations
+	ldx (I4)-3,NULL	// I4 += -3
+	loop LC,F7B6-1
+	ldx (I4)+3,I0	// unspill ATe from #-3
+//loop resumes
+//     }
+//     {
+//       *dptr++ = ~SpiSendReceive (0);
+	call _SpiSendReceive
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// 0 -> A0
+// jumped away
+	xor A0,ONES,A0	// ET4 xor (-1) -> ET5
+	stx A0,(I0)+1	// ET5 ==> ATe
+//	(0 nop's needed)
+// loop end
+F7B6:	// loop exit
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 47,A0	// 47 -> 1 -> ETb
+	ldc 49256,I0	// 49256 -> ETc
+	stx A0,(I0)/*V*/ ; and NULL,NULL,A0	// ETb ==> ETc
+//   return 0;
+	ldx (I6)-1,LE	// 0 -> 1 -> ET3
+	ldy (I6),LS ; ldx (I6)-1,LC
+	ldy (I6),I0 ; ldx (I6)-1,C0
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,EeCompareBlock	// 39 words
+	.export _EeCompareBlock
+_EeCompareBlock:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	stx B1,(I6) ; sty C0,(I6)+1
+//   SpiWaitStatus ();
+	ldc 256,B1	// 256 -> 0 -> ET2
+	call _SpiWaitStatus
+	stx I0,(I6) ; ldy (I4)-2,NULL
+// jumped away
+//   EePutReadBlockAddress (blockn);
+	call _EePutReadBlockAddress
+	ldx (I4)+2,C0	// unspill 'blockn' from #0
+// jumped away
+//   }
+// (n = 0; n < 256; n++)
+	and NULL,NULL,A1 ; ldx (I4)-3,NULL	// 0 -> 'n'
+	j F8B8
+	ldx (I4)+3,I0	// unspill AT13 from #-3
+// jumped away
+F8B5:	// (loop lvl 2)
+//     }
+//     {
+//       if ((*dptr++) != (~SpiSendReceive (0)))
+	ldx (I0)+1,B0 ; ldy (I6)+1,NULL	// AT13 ==> ET6
+	call _SpiSendReceive
+	and NULL,NULL,A0	// 0 -> A0
+// jumped away
+	xor A0,ONES,A0	// ET8 xor (-1) -> ET9
+	sub B0,A0,B0	// ET6 != ET9 -> AT12
+	ldc 47,A0	// 47 -> 1 -> ETa
+	jzc F8B9	// unsigned compare
+	sub A1,ONES,A1	// 'n' - (-1) -> 'n'
+// jumped away
+F8B8:	// (loop lvl 2)
+	sub A1,B1,B0	// 'n' < ET2 -> AT10
+	ldc 47,A0	// 47 -> 1 -> ETa
+	jlt F8B5	// signed compare
+	nop
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 49256,I0	// 49256 -> ETb
+//   return 0;
+	j F8B1
+	stx A0,(I0)/*V*/ ; and NULL,NULL,A0	// ETa ==> ETb
+// jumped away
+F8B9:
+//       }
+//       {
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 49256,I0	// 49256 -> ETb
+	stx A0,(I0)/*V*/ ; sub NULL,ONES,A0	// ETa ==> ETb
+//         return 1;
+F8B1:
+	ldx (I6)-1,I0
+	ldy (I6),C0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,EeRead4KSectorYToWorkspace	// 32 words
+	.export _EeRead4KSectorYToWorkspace
+_EeRead4KSectorYToWorkspace:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A1,(I6) ; sty C0,(I6)+1
+	ldc 65528,A1	// 65528 -> 1 -> ET4
+	stx I0,(I6) ; sty LC,(I6)+1
+	ldc _mallocAreaY+6144,I0	// 'dptr'
+// =(mallocAreaY + 6144);
+//   SpiWaitStatus ();
+	stx LS,(I6) ; sty LE,(I6)	// I4 += -2
+	call _SpiWaitStatus
+	ldx (I4)-2,NULL
+// jumped away
+//   blockn &= 0xfff8;
+	ldx (I4)+2,A0	// unspill 'blockn' from #0
+//   EePutReadBlockAddress (blockn);
+	call _EePutReadBlockAddress
+	and A0,A1,C0	// 'blockn' and ET4 -> 'blockn'
+// jumped away
+	ldc 2047,LC	// loop 2048 iterations
+	loop LC,F9B6-1
+	nop
+//loop resumes
+//     }
+//     {
+//       *dptr++ = ~SpiSendReceive (0);
+	call _SpiSendReceive
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// 0 -> A0
+// jumped away
+	xor A0,ONES,A0	// ET9 xor (-1) -> ETa
+	sty A0,(I0)+1	// ETa ==> 'dptr'
+//	(0 nop's needed)
+// loop end
+F9B6:	// loop exit
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	ldc 47,A0	// 47 -> 1 -> ET10
+	ldc 49256,I0	// 49256 -> ET11
+	stx A0,(I0)/*V*/ ; ldy (I6),LE	// ET10 ==> ET11
+//   return 0;
+	ldx (I6)-1,LS ; and NULL,NULL,A0	// 0 -> 1 -> ET8
+	ldy (I6),LC ; ldx (I6)-1,I0
+	ldy (I6),C0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,InitSpi	// 25 words
+	.export _InitSpi
+_InitSpi:
+	ldx (I6)+2,NULL	// I6 += 2
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A0,(I6) ; sty A1,(I6)+1
+	ldc 47,A0	// 47 -> 1 -> ET0
+	ldc 31,A1	// 31 -> 1 -> ETa
+	stx I0,(I6) ; ldy (I4)-2,NULL
+	ldc 49256,I0	// 49256 -> ET1
+// (*(__x volatile u_int16 *)(u_int16)(0xC068)) =(1<<5) |(7<<1) |(1<<0);
+	stx A0,(I0)+4/*V*/ ; and NULL,NULL,A0	// ET0 ==> ET1
+// (*(__x volatile u_int16 *)(u_int16)(0xC06C)) = 0;
+	stx A0,(I0)/*V*/	// ET2 ==> ET3
+// (*(__x volatile u_int16 *)(u_int16)(0xC069)) =(1<<2) * (clockDivider - 1);
+	ldc 49257,I0	// 49257 -> ET9
+	ldx (I4)+2,A0	// unspill 'clockDivider' from #0
+	add A0,ONES,A0	// 'clockDivider' + (-1) -> ET6
+	add A0,A0,A0	// ET6 + ET6 -> AT7
+	add A0,A0,A0	// AT7 + AT7 -> ET8
+	stx A0,(I0)/*V*/	// ET8 ==> ET9
+// (*(__x volatile u_int16 *)(u_int16)(0xC011)) |= 0x1f;
+	ldc 49169,I0	// 49169 -> ETb
+	ldx (I0),A0/*V*/	// ETb ==> ETc
+	or A0,A1,A0	// ETc or ETa -> ETd
+	stx A0,(I0)/*V*/	// ETd ==> ETb
+	ldx (I6)-1,I0
+	ldy (I6),A1 ; ldx (I6)-1,A0
+	ldx (I4),I6 ; ldy (I4),I4
+	jr
+	ldx (I6)-2,NULL
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,FindCachedBlock	// 46 words
+	.export _FindCachedBlock
+_FindCachedBlock:
+	ldx (I6)+2,NULL ; or NULL,ONES,A0	// I6 += 2
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	stx B1,(I6) ; sty C0,(I6)+1
+	ldc _blockAddress,B1	// ET9
+	ldc 16,C0	// 16 -> 0 -> ET3
+	stx C1,(I6) ; sty D0,(I6)+1
+	stx I0,(I6) ; sty I2,(I6)
+	ldc _lastFoundBlock,I0	// ET1
+// = -1;
+	ldx (I4)-2,NULL ; sub NULL,ONES,A1	// -1 -> 0 -> ET0
+	stx A0,(I0)/*V*/ ; and NULL,NULL,A0	// ET0 ==> ET1
+//   for (i = 0; i < 16; i++)
+	ldc _blockPresent,I0	// ET7
+	j F11B6
+	ldx (I4)+2,B0	// 0 -> 'i'
+// jumped away
+F11B3:	// (loop lvl 2)
+//   }
+//   {
+//     if ((blockPresent & 1  << i)
+//         && (blockAddress[i] == blockNumber))
+	ashl A1,A0,C1 ; ldx (I0),D0/*V*/	// ET4 << 'i' -> ET5
+	and D0,C1,C1	// 'blockPresent' and ET5 -> ET8
+	nop
+	jzs F11B8	// compare against zero
+	add B1,A0,C1	// ET9 + 'i' -> AT1a
+// jumped away
+	mv C1,I2	// AT1a -> ETa
+	ldx (I2),C1	// ETa ==> ETb
+	sub C1,B0,C1	// ETb == 'blockNumber' -> AT19
+	nop
+	jzs F11B7	// unsigned compare
+	nop
+// jumped away
+F11B8:	// (loop lvl 2)
+	sub A0,ONES,A0	// 'i' - (-1) -> 'i'
+F11B6:	// (loop lvl 2)
+	sub A0,C0,C1	// 'i' < ET3 -> AT15
+	nop
+	jlt F11B3	// signed compare
+	nop
+// jumped away
+//   return 0;
+	j F11B1
+	and NULL,NULL,A0	// 0 -> ET12
+// jumped away
+F11B7:
+//     }
+//     {
+//       lastFoundBlock = i;
+	ldc 256,A1	// 256 -> 0 -> ETd
+	ldc _lastFoundBlock,I0	// ET1
+	stx A0,(I0)/*V*/ ; mulss A1,A0	// 'i' ==> ET1
+//       return mallocAreaY + 256 * i;
+	add NULL,P,A	// P -> AT17
+	ldc _mallocAreaY,A1	// ETc
+	add A1,A0,A0	// ETc + ETe -> ETf
+F11B1:
+	ldy (I6),I2 ; ldx (I6)-1,I0
+	ldy (I6),D0 ; ldx (I6)-1,C1
+	ldy (I6),C0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	jr
+	ldx (I6)-2,NULL
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,WriteContinuous4K	// 93 words
+	.export _WriteContinuous4K
+_WriteContinuous4K:
+	ldc _blockAddress,A0	// ET7
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+2,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	stx B1,(I6) ; and NULL,NULL,A1	// 0 -> 'i'
+	sty C0,(I6)+1 ; sub NULL,ONES,C0
+	stx C1,(I6) ; sty D0,(I6)+1	// 1 -> 0 -> ET2
+	ldc 8,C1	// 8 -> 1 -> ETd
+	add C1,ONES,D0 ; stx D1,(I6)
+	sty I0,(I6)+1
+	ldc _blockPresent,I0	// ET5
+	stx I2,(I6) ; sty LC,(I6)+1
+// (i = 0; i < 16 - 7; i++)
+	j F12B6
+	stx LS,(I6) ; sty LE,(I6)
+// jumped away
+F12B16:	// (loop lvl 2)
+//     {
+//     }
+	sub A1,ONES,A1	// 'i' - (-1) -> 'i'
+F12B6:	// (loop lvl 2)
+	ldc 9,B0	// 9 -> ET1
+	sub A1,B0,B0	// 'i' >= ET1 -> AT23
+	nop
+	jcs F12B4	// unsigned compare
+	nop
+// jumped away
+//   }
+//   {
+//     if ((blockPresent & 1  << i)
+//         && ((blockAddress[i] & 0x0007) == 0))
+	ashl C0,A1,B0 ; ldx (I0),B1/*V*/	// ET2 << 'i' -> ET3
+	and B1,B0,B0	// 'blockPresent' and ET3 -> ET6
+	nop
+	jzs F12B16	// compare against zero
+	add A0,A1,B0	// ET7 + 'i' -> AT2c
+// jumped away
+	mv B0,I2	// AT2c -> ET8
+	ldx (I2),B0	// ET8 ==> ET9
+	and B0,D0,B0	// ET9 and ETa -> ETb
+	ldc 1,B0
+	jzc F12B16	// compare against zero
+	nop	// 1 -> 'k'
+// jumped away
+//     }
+//     {
+//       for (k = 1; k < 8; k++)
+	add A0,A1,B1	// ET7 + 'i' -> AT2f
+	mv B1,I2	// AT2f -> ET8
+	j F12B13
+	ldx (I2),B1	// ET8 ==> ET9
+// jumped away
+F12B10:	// (loop lvl 3)
+	ldx (I4)+1,NULL ; add A1,B0,D1	// I4 += 1
+	stx C0,(I4) ; add A0,D1,D1	// AT30 spills to #1
+//       }
+//       {
+//         if (blockAddress[i + k] != blockAddress[i] + k)
+	mv D1,I2 ; add B1,B0,D1	// AT2d -> ETf
+	ldx (I2),C0	// ETf ==> ET10
+	sub C0,D1,D1	// ET10 != ET11 -> AT25
+	nop	// I4 += 1
+	jzc F12B36	// unsigned compare
+	nop
+// jumped away
+	sub B0,ONES,B0 ; ldx (I4)-1,C0	// I4 += 1
+F12B13:	// (loop lvl 3)
+	sub B0,C1,D1	// 'k' < ETd -> AT28
+	nop
+	jcc F12B10	// unsigned compare
+	nop
+// jumped away
+	ldc 256,A0	// 256 -> 1 -> ET16
+	muluu A0,A1 ; ldx (I6)+1,NULL	// I6 += 1
+// ;
+// ;
+//       if (-1 != EeProgram4K (blockAddress[i], mallocAreaY + 256 * i))
+	ldc _mallocAreaY,A0	// ET15
+	add NULL,P,B	// P -> AT27
+	add A0,B0,A0	// ET15 + ET17 -> ET18
+	stx A0,(I6)+1	// ET18
+	ldc _blockAddress,A0	// ET7
+	add A0,A1,A0	// ET7 + 'i' -> AT2e
+	mv A0,I0	// AT2e -> ET8
+	ldx (I0),A0	// ET8 ==> ET9
+	call _EeProgram4K
+	stx A0,(I6)	// ET9
+// jumped away
+	sub ONES,A0,A0 ; ldx (I6)-2,NULL	// I6 += -2
+	ldc 7,LC
+	jzc F12B17	// signed compare
+	and NULL,NULL,A0	// 0 -> 1 -> ET0
+// jumped away
+//       }
+//       else
+//       {
+//         return 0;
+F12B1:
+	ldy (I6),LE ; ldx (I6)-1,LS
+	ldy (I6),LC ; ldx (I6)-1,I2
+	ldy (I6),I0 ; ldx (I6)-1,D1
+	ldy (I6),D0 ; ldx (I6)-1,C1
+	ldy (I6),C0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+//       }
+//       {
+//         for (k = 0; k < 8; k++)
+	ldc 7,LC	// loop 8 iterations
+F12B17:
+	ldc _blockPresent,I0	// ET5
+	loop LC,F12B22-1
+	ldc 0,A0	// 0 -> 'k'
+//loop resumes
+//         }
+//         {
+//           blockPresent &= ~(1  << (i + k));
+	add A1,A0,B0	// 'i' + 'k' -> ETe
+	sub NULL,ONES,B1	// 1 -> 0 -> ET2
+	ashl B1,B0,B0	// ET2 << ETe -> ET1a
+	xor B0,ONES,B1 ; ldx (I0),B0/*V*/	// ET1a xor (-1) -> ET1b
+	and B0,B1,B0	// 'blockPresent' and ET1b -> ET1d
+	stx B0,(I0)/*V*/ ; sub A0,ONES,A0	// ET1d ==> ET5
+//	(0 nop's needed)
+// loop end
+F12B22:	// loop exit
+//       return 1;
+	j F12B1
+	sub NULL,ONES,A0	// 1 -> 1 -> ETc
+// jumped away
+F12B36:	// (loop lvl 3)
+	j F12B16
+	ldx (I4)-1,C0	// unspill AT30 from #1
+// jumped away
+F12B4:
+//   return 0;
+	j F12B1
+	and NULL,NULL,A0	// 0 -> 1 -> ET0
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,GetEmptyBlock	// 42 words
+	.export _GetEmptyBlock
+_GetEmptyBlock:
+	ldx (I6)+2,NULL ; and NULL,NULL,A0	// I6 += 2
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	stx B1,(I6) ; sty C0,(I6)+1
+	stx C1,(I6) ; sub NULL,ONES,C0	// 1 -> 0 -> ET2
+	ldc 16,C1	// 16 -> 0 -> ET1
+	sty D0,(I6)+1 ; ldx (I4)-2,NULL
+	stx I0,(I6)
+// (i = 0; i < 16; i++)
+	ldc _blockPresent,I0	// ET5
+	j F13B6
+	ldx (I4)+2,A1	// 0 -> 'i'
+// jumped away
+F13B3:	// (loop lvl 2)
+//   }
+//   {
+//     if (!(blockPresent & 1  << i))
+	ashl C0,A0,B0 ; ldx (I0),B1/*V*/	// ET2 << 'i' -> ET3
+	and B1,B0,D0	// 'blockPresent' and ET3 -> ET6
+	nop
+	jzs F13B7	// compare against zero
+	nop
+// jumped away
+	sub A0,ONES,A0	// 'i' - (-1) -> 'i'
+F13B6:	// (loop lvl 2)
+	sub A0,C1,B0	// 'i' < ET1 -> AT13
+	nop
+	jlt F13B3	// signed compare
+	nop
+// jumped away
+//   return 0;
+	j F13B1
+	and NULL,NULL,A0	// 0 -> ET10
+// jumped away
+F13B7:
+//     }
+//     {
+//       blockPresent |= 1  << i;
+	or B1,B0,B0	// 'blockPresent' or ET3 -> ET7
+	stx B0,(I0)/*V*/	// ET7 ==> ET5
+//       blockAddress[i] = blockNumber;
+	ldc _blockAddress,B0	// ET8
+	add B0,A0,B0	// ET8 + 'i' -> AT17
+	mv B0,I0	// AT17 -> ET9
+	stx A1,(I0)	// 'blockNumber' ==> ET9
+//       return mallocAreaY + 256 * i;
+	ldc 256,A1	// 256 -> 0 -> ETb
+	mulss A1,A0	// ETb * 'i' -> P
+	add NULL,P,A	// P -> AT15
+	ldc _mallocAreaY,A1	// ETa
+	add A1,A0,A0	// ETa + ETc -> ETd
+F13B1:
+	ldx (I6)-1,I0
+	ldy (I6),D0 ; ldx (I6)-1,C1
+	ldy (I6),C0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	jr
+	ldx (I6)-2,NULL
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,FsMapSpiFlashCreate	// 19 words
+	.export _FsMapSpiFlashCreate
+_FsMapSpiFlashCreate:
+	ldc 2,A0	// 2 -> 1 -> ET0
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx I0,(I6)+1
+// ;
+//   InitSpi (2);
+	ldc _blockPresent,I0	// ET2
+	call _InitSpi
+	stx A0,(I6)	// ET0
+// jumped away
+	and NULL,NULL,A0 ; ldy (I6)-1,NULL	// I6 += -1
+//   blockPresent = 0;
+	stx A0,(I0)/*V*/	// ET1 ==> ET2
+//   shouldFlush = 0;
+	ldc _shouldFlush,I0	// ET3
+	stx A0,(I0)/*V*/	// ET1 ==> ET3
+//   return &spiFlashMapper;
+	ldx (I6)-1,I0
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	ldc _spiFlashMapper,A0	// ET4
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,FsMapSpiFlashRead	// 60 words
+	.export _FsMapSpiFlashRead
+_FsMapSpiFlashRead:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	stx B1,(I6) ; sty C0,(I6)+1
+	stx C1,(I6) ; sty D0,(I6)+1
+	stx I0,(I6) ; sty I1,(I6)+1
+	ldc _shouldFlush,I0	// ET1
+	stx LC,(I6) ; sty LS,(I6)+1
+	stx LE,(I6) ; and NULL,NULL,A1
+// bl
+// (shouldFlush)
+	ldx (I0),A0/*V*/ ; ldy (I4)-4,NULL	// ET1 ==> 'shouldFlush'
+	sub A0,NULL,A0 ; ldx (I4)+1,B0	// 'shouldFlush' == (0) -> (0)
+	ldc 32,C0
+	jzs F15B4	// unsigned compare
+	and NULL,NULL,C1
+// jumped away
+	and NULL,NULL,A0 ; ldx (I4)+3,NULL
+//     return 0;
+F15B1:
+	ldx (I6)-1,LE
+	ldy (I6),LS ; ldx (I6)-1,LC
+	ldy (I6),I1 ; ldx (I6)-1,I0
+	ldy (I6),D0 ; ldx (I6)-1,C1
+	ldy (I6),C0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+	ldc 32,C0	// 32 -> 3 -> C0
+	ldx (I4)-4,NULL ; and NULL,NULL,C1	// I4 += -4
+//   firstBlock += 32;
+	ldx (I4)+1,B0	// 0 -> C1
+F15B4:
+	ldx (I4)-3,B1	// unspill B1 from #0
+	add B,C,C ; ldx (I4)+1,B1	// 'firstBlock' + ET2 -> AT19
+//   while (bl < blocks)
+	ldx (I4)+5,B0	// unspill 'blocks' from #-5
+	sub B0,A1,A0	// 'blocks' <= 'bl' -> AT11
+	ldc 256,D0	// 256 -> 0 -> ETa
+	jle F15B6	// signed compare
+	add A0,ONES,A0	// AT11 + (-1) -> AT11
+// jumped away
+	loop A0,F15B6-1
+	nop
+//loop resumes
+	ldx (I6)+1,NULL ; add C0,NULL,A0	// I6 += 1
+//   }
+// source
+	call _FindCachedBlock
+	stx C0,(I6)	// AT19 lsw ET5
+// jumped away
+	ldx (I6)-1,NULL ; sub A0,NULL,A0	// I6 += -1
+// (source)
+	mv B1,I0 ; mv A0,I1	// AT1a -> I0
+	jzs F15B11	// signed compare
+	nop
+// jumped away
+//     }
+//     {
+//       memcpyYX (data, source, 256);
+	call _memcpyYX
+	ldc 256,A0	// 256 -> A0
+// jumped away
+F15B12:	// (loop lvl 2)
+//     data += 256;
+//     firstBlock++;
+	sub C,ONES,C	// AT19 - (-1) -> AT19
+	add B1,D0,B1	// AT1a + ETa -> AT1a
+	sub A1,ONES,A1	// 'bl' - (-1) -> 'bl'
+//     bl++;
+//	(0 nop's needed)
+// loop end
+F15B6:	// loop exit
+//   return bl;
+	j F15B1
+	add A1,NULL,A0	// 'bl' returns via A0
+// jumped away
+F15B11:	// (loop lvl 2)
+	ldx (I6)+1,NULL ; add C0,NULL,A0	// I6 += 1
+//     }
+//     else
+//     {
+//       EeReadBlock (firstBlock, data);
+	stx B1,(I6)+1	// AT1a
+	call _EeReadBlock
+	stx C0,(I6)	// AT19 lsw ET5
+// jumped away
+	j F15B12
+	ldx (I6)-2,NULL	// I6 += -2
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,FsMapSpiFlashWrite	// 86 words
+	.export _FsMapSpiFlashWrite
+_FsMapSpiFlashWrite:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	ldc 32,B0	// 32 -> 3 -> B0
+	stx B1,(I6) ; sty C0,(I6)+1
+	stx C1,(I6) ; sty D0,(I6)+1
+	stx D1,(I6) ; sty I0,(I6)+1
+	ldc _shouldFlush,I0	// ET3
+	stx I1,(I6) ; sty I2,(I6)
+	ldx (I4)-4,NULL ; and NULL,NULL,C0	// I4 += -4
+// bl
+// += 32;
+	ldx (I4)+1,A0 ; and NULL,NULL,B1	// 0 -> B1
+	ldx (I4)-3,A1	// unspill A1 from #0
+	add A,B,B ; ldx (I0),A0/*V*/	// 'firstBlock' + ET1 -> AT27
+//   if (shouldFlush)
+	sub A0,NULL,A0	// 'shouldFlush' == (0) -> (0)
+	ldc 49282,I2
+	jzs F16B36	// unsigned compare
+	and NULL,NULL,D1
+// jumped away
+	ldx (I4)+6,NULL ; and NULL,NULL,A0
+//   }
+//   {
+// ;
+//     return 0;
+F16B1:
+	ldy (I6),I2 ; ldx (I6)-1,I1
+	ldy (I6),I0 ; ldx (I6)-1,D1
+	ldy (I6),D0 ; ldx (I6)-1,C1
+	ldy (I6),C0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+	ldc 49282,I2	// 49282 -> ET12
+	ldx (I4)-6,NULL ; and NULL,NULL,D1	// 0 -> 0 -> ET0
+F16B36:
+	ldx (I4)+1,C1	// unspill AT28 from #-6
+	j F16B8
+	ldx (I4)+5,A1	// unspill 'blocks' from #-5
+// jumped away
+F16B5:	// (loop lvl 2)
+//   }
+//   {
+//     if (EeCompareBlock (firstBlock, data))
+	stx C1,(I6)+1 ; add B0,NULL,D0	// AT28
+	call _EeCompareBlock
+	stx B0,(I6)	// AT27 lsw ET5
+// jumped away
+	ldx (I6)-1,NULL ; sub A0,NULL,A0	// I6 += -2
+	ldc 256,A0
+	jzs F16B11	// unsigned compare
+	nop	// I6 += 1
+// jumped away
+//     }
+// target
+	call _FindCachedBlock
+	stx D0,(I6)	// ET5
+// jumped away
+	sub A0,NULL,A0	// I6 += -1
+// (target)
+	nop	// I6 += 1
+	jzc F16B16	// signed compare
+	nop
+// jumped away
+// ;
+// ;
+//       }
+//       else
+//       {
+//         target = GetEmptyBlock (firstBlock);
+	call _GetEmptyBlock
+	stx B0,(I6) ; add B0,NULL,A0	// AT27 lsw ET5
+// jumped away
+F16B16:	// (loop lvl 2)
+	ldx (I6)-1,NULL ; sub A0,NULL,A0
+//       if (!target)
+	nop
+	jzc F16B19	// signed compare
+	nop
+// jumped away
+	ldx (I6)+1,NULL ; sub NULL,ONES,A0	// I6 += 1
+//       }
+//       {
+//         FsMapSpiFlashFlush (0, 1);
+	stx A0,(I6)+1	// ET9
+	call _FsMapSpiFlashFlush
+	stx D1,(I6)	// ET0
+// jumped away
+	ldx (I6)-1,NULL ; add B0,NULL,A0	// I6 += 1
+//         target = GetEmptyBlock (firstBlock);
+	call _GetEmptyBlock
+	stx B0,(I6)	// AT27 lsw ET5
+// jumped away
+	ldx (I6)-1,NULL	// I6 += -1
+F16B19:	// (loop lvl 2)
+//       if (target)
+	sub A0,NULL,A0	// 'target' == (0) -> (0)
+	nop
+	jzs F16B23	// signed compare
+	nop
+// jumped away
+// ;
+//       }
+//       {
+//         memcpyXY (target, data, 256);
+	mv A0,I0 ; mv C1,I1	// 'target' -> I0
+	call _memcpyXY
+	ldc 256,A0	// 256 -> A0
+// jumped away
+//       WriteContinuous4K ();
+	call _WriteContinuous4K
+	nop
+// jumped away
+	ldc 256,A0	// 256 -> ET17
+	ldx (I6)+1,NULL
+F16B11:	// (loop lvl 2)
+	sub B,ONES,B ; ldx (I2),D0/*V*/	// ET12 ==> ET13
+	add C1,A0,C1 ; ldy (I6)-1,NULL	// AT28 + ET17 -> AT28
+	sub C0,ONES,C0	// 'bl' - (-1) -> 'bl'
+//     if ((*(__x volatile u_int16 *)(u_int16)((0xC080U +2))) &(1<<15))
+// ;
+//     data += 256;
+//     firstBlock++;
+//     bl++;
+F16B8:	// (loop lvl 2)
+	sub C0,A1,A0 ; ldx (I6)+1,NULL	// 'bl' < 'blocks' -> AT20
+	nop	// I6 += 1
+	jcc F16B5	// unsigned compare
+	nop
+// jumped away
+//   return bl;
+	j F16B1
+	ldx (I6)-1,NULL ; add C0,NULL,A0
+// jumped away
+F16B23:
+//           ;
+//       }
+//       else
+//       {
+//         puts ("FATAL ERROR: NO CACHE SPACE. THIS NEVER HAPPENS.");
+	call _puts
+	ldc fatalerro_1,I0	// I0
+// jumped away
+F16B30:
+	j F16B30
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,FsMapSpiFlashFlush	// 104 words
+	.export _FsMapSpiFlashFlush
+_FsMapSpiFlashFlush:
+	ldx (I6)+1,NULL ; sub NULL,ONES,A0	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+4,I4
+	stx A1,(I6) ; sty B0,(I6)+1
+	stx B1,(I6) ; sty C0,(I6)+1
+	stx C1,(I6) ; sty D0,(I6)+1
+	stx D1,(I6) ; sty I0,(I6)+1
+	ldc _shouldFlush,I0	// ET1
+	stx I1,(I6) ; sty I2,(I6)+1
+	stx I3,(I6) ; sty LC,(I6)+1
+	stx LS,(I6) ; sty LE,(I6)
+// ;
+//   if (shouldFlush > 1)
+	ldx (I0),A1/*V*/	// ET1 ==> 'shouldFlush'
+	sub A0,A1,A1	// ET0 <= 'shouldFlush' -> AT27
+	ldc 1,D0
+	jcs F17B4	// unsigned compare
+	ldc _blockPresent,I2
+// jumped away
+//     return 0;
+	and NULL,NULL,A0	// 0 -> 0 -> ET2
+F17B1:
+	ldy (I6),LE ; ldx (I6)-1,LS
+	ldy (I6),LC ; ldx (I6)-1,I3
+	ldy (I6),I2 ; ldx (I6)-1,I1
+	ldy (I6),I0 ; ldx (I6)-1,D1
+	ldy (I6),D0 ; ldx (I6)-1,C1
+	ldy (I6),C0 ; ldx (I6)-1,B1
+	ldy (I6),B0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+//   shouldFlush = 2;
+	ldc _shouldFlush,I0	// ET1
+	sub NULL,ONES,D0	// 1 -> 0 -> ET6
+	ldc _blockPresent,I2	// ET9
+F17B4:
+	ldc _shouldFlush,I3	// ET1
+	ldc _mallocAreaY+6144,C1	// ET17
+	ldc 256,D1	// 256 -> 1 -> ET14
+	ldc 2,A0	// 2 -> 1 -> ET3
+	stx A0,(I0)/*V*/ ; and NULL,NULL,B1	// ET3 ==> ET1
+//   for (i = 0; i < 16; i++)
+F17B8:	// (loop lvl 2)
+	ldc 16,A0	// 16 -> ET5
+	sub B1,A0,A0	// 'i' >= ET5 -> AT2b
+	nop
+	jcs F17B6	// unsigned compare
+	nop
+// jumped away
+//   }
+//   {
+//     if (blockPresent & (1  << i))
+	ashl D0,B1,A0 ; ldx (I2),A1/*V*/	// ET6 << 'i' -> ET7
+	and A1,A0,A0	// 'blockPresent' and ET7 -> ETa
+	nop
+	jzs F17B10	// compare against zero
+	nop
+// jumped away
+	ldc _blockAddress,A0	// ETb
+	add A0,B1,A0 ; ldy (I6)+1,NULL	// I6 += 1
+	mv A0,I0	// AT31 -> ETc
+//     }
+//     {
+// ;
+// ;
+// ;
+//       lba = blockAddress[i] & 0xfff8;
+	ldc 65528,A0	// 65528 -> ETe
+	ldx (I0),A1	// ETc ==> ETd
+	and A1,A0,B0	// ETd and ETe -> 'lba'
+//       EeRead4KSectorYToWorkspace (lba);
+	call _EeRead4KSectorYToWorkspace
+	stx B0,(I6)	// 'lba'
+// jumped away
+	ldc 7,LC	// loop 8 iterations
+	ldx (I2),C0/*V*/ ; and NULL,NULL,A1	// 0 -> 'j'
+//       newBlockPresent = blockPresent;
+//       for (j = 0; j < 8; j++)
+	loop LC,F17B13-1
+	ldy (I6)-1,NULL	// I6 += -1
+//loop resumes
+	ldx (I6)+1,NULL ; add B0,A1,A0	// I6 += 1
+//       }
+//       {
+// ;
+//         if (dptr = FindCachedBlock (lba + j))
+	call _FindCachedBlock
+	stx A0,(I6)	// ET12
+// jumped away
+	ldx (I6)-1,NULL ; sub A0,NULL,A0	// I6 += -1
+	nop
+	jzs F17B18	// signed compare
+	nop
+// jumped away
+	ldx (I4)+2,NULL ; muluu D1,A1	// I4 += 2
+	stx C0,(I4) ; sty C1,(I4)-1	// C0 spills to #0
+	stx B0,(I4) ; add NULL,P,C	// P -> AT2d
+	sty A0,(I4)+1 ; add C0,NULL,B0	// AT33 spills to #1
+// ;
+//         }
+//         {
+//           memcpyYY ((mallocAreaY + 6144) + (256 * j), dptr, 256);
+	ldx (I4),C0 ; ldy (I4)-1,C1	// AT2d lsw ET18
+	add C1,B0,A0 ; ldx (I4),B0	// ET17 + ET18 -> ET19
+	mv A0,I0	// ET19 -> I0
+	ldy (I4)-1,A0	// unspill AT32 from #1
+	mv A0,I1	// 'dptr' -> I1
+	call _memcpyYY
+	ldc 256,A0	// 256 -> A0
+// jumped away
+//           newBlockPresent &= ~(1  << lastFoundBlock);
+	ldc _lastFoundBlock,I0	// ET1b
+	ldx (I0),A0/*V*/	// ET1b ==> 'lastFoundBlock'
+	ashl D0,A0,A0	// ET6 << 'lastFoundBlock' -> ET1c
+	xor A0,ONES,A0	// ET1c xor (-1) -> ET1d
+	and C0,A0,C0	// 'newBlockPresent' and ET1d -> 'newBlockPresent'
+F17B18:	// (loop lvl 3)
+	sub A1,ONES,A1	// 'j' - (-1) -> 'j'
+//	(0 nop's needed)
+// loop end
+F17B13:	// loop exit
+	ldx (I6)+1,NULL	// I6 += 1
+//       if (-1 != EeProgram4K (lba,(mallocAreaY + 6144)))
+	stx C1,(I6)+1	// ET17
+	call _EeProgram4K
+	stx B0,(I6)	// 'lba'
+// jumped away
+	ldx (I6)-2,NULL ; sub ONES,A0,A0	// I6 += -2
+	nop
+	jzs F17B22	// signed compare
+	nop
+// jumped away
+//       }
+//       {
+//         blockPresent = newBlockPresent;
+	stx C0,(I2)/*V*/ ; and NULL,NULL,A0	// 'newBlockPresent' ==> ET9
+//         shouldFlush = 0;
+	stx A0,(I3)/*V*/	// ET4 ==> ET1
+F17B10:	// (loop lvl 2)
+	j F17B8
+	sub B1,ONES,B1	// 'i' - (-1) -> 'i'
+// jumped away
+F17B22:
+//       }
+//       else
+//       {
+//         shouldFlush = 1;
+	ldc _shouldFlush,I0	// ET1
+	sub NULL,ONES,A0	// 1 -> 1 -> ET0
+//         return 0;
+	j F17B1
+	stx A0,(I0)/*V*/ ; and NULL,NULL,A0	// ET0 ==> ET1
+// jumped away
+F17B6:
+//   shouldFlush = 0;
+	ldc _shouldFlush,I0	// ET1
+	and NULL,NULL,A0	// 0 -> 1 -> ET4
+//   return 0;
+	j F17B1
+	stx A0,(I0)/*V*/	// ET4 ==> ET1
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,MyMassStorage	// 115 words
+	.export _MyMassStorage
+_MyMassStorage:
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+1,I4
+	stx A0,(I6) ; sty A1,(I6)+1
+	ldc 31,A0	// 31 -> 1 -> ET1
+	stx B0,(I6) ; sty B1,(I6)+1
+	stx C0,(I6) ; sty C1,(I6)+1
+	stx D0,(I6) ; sty I0,(I6)+1
+	ldc _voltages+3,I0	// ET4
+	stx I2,(I6)+1 ; and NULL,NULL,B0
+// usbMode
+//   voltages[voltCoreUSB] = 31;
+	stx A0,(I0)+1	// ET1 ==> ET4
+//   voltages[voltIoUSB] = 31;
+	stx A0,(I0)-1	// ET1 ==> ET4
+// ;
+// ;
+//   PowerSetVoltages (&voltages[voltCoreUSB]);
+	call _PowerSetVoltages
+	stx I0,(I6)	// ET4
+// jumped away
+//   BusyWait10 ();
+	call _BusyWait10
+	ldx (I6)-1,NULL	// I6 += -1
+// jumped away
+	ldx (I6)+1,NULL ; sub NULL,ONES,A0	// I6 += 1
+//   LoadCheck (0, 1);
+	stx A0,(I6)+1 ; and NULL,NULL,A0	// ET7
+	call _LoadCheck
+	stx A0,(I6)	// ET0
+// jumped away
+	ldx (I6)-1,NULL	// I6 += -2
+//   SetRate (44100U);
+	call _SetRate
+	ldc 44100,C1	// 44100 -> C1
+// jumped away
+//   SetHookFunction ((u_int16) InitUSBDescriptors, MyInitUSBDescriptors);
+	ldc _InitUSBDescriptors,A0	// ETa
+	mv A0,I0	// ETa -> I0
+	call _SetHookFunction
+	ldc _MyInitUSBDescriptors,A0	// A0
+// jumped away
+	ldx (I6)+1,NULL ; sub NULL,ONES,A0	// I6 += 1
+// ;
+//   InitUSB (1);
+	call _InitUSB
+	stx A0,(I6)	// ETd
+// jumped away
+	ldc 32,C1	// 32 -> 0 -> ET14
+	ldc _shouldFlush,I2	// ETf
+	ldc _tmpBuf,B1	// ET16
+	and NULL,NULL,C0 ; ldx (I6)-1,NULL	// I6 += -1
+// ;
+//   while (USBIsAttached ())
+	j F18B27
+	sub NULL,ONES,D0	// 1 -> 1 -> ETd
+// jumped away
+F18B9:	// (loop lvl 2)
+//   }
+//   {
+//     USBHandler ();
+//     if (shouldFlush)
+	ldx (I2),A0/*V*/ ; ldy (I6)+1,NULL	// ETf ==> 'shouldFlush'
+	sub A0,NULL,A0	// 'shouldFlush' == (0) -> (0)
+	nop	// I6 += 1
+	callzs _USBWantsSuspend
+	ldc F18B16,LR0
+// jumped away
+//     }
+//     {
+//       FsMapSpiFlashFlush (0, 1);
+	stx D0,(I6)+1	// ETd
+	call _FsMapSpiFlashFlush
+	stx C0,(I6)	// ET0
+// jumped away
+//     if (USBWantsSuspend ())
+	call _USBWantsSuspend
+	ldx (I6)-1,NULL	// I6 += -2
+// jumped away
+F18B16:	// (loop lvl 2)
+	sub A0,NULL,A0	// ET11 == (0) -> (0)
+	nop
+	jzs F18B19	// unsigned compare
+	nop
+// jumped away
+//     }
+//     {
+//       if (USBIsDetached ())
+	call _USBIsDetached
+	ldx (I6)+1,NULL	// I6 += 1
+// jumped away
+	sub A0,NULL,A0	// ET12 != (0) -> (0)
+	nop
+	jzc F18B10	// unsigned compare
+	nop
+// jumped away
+F18B19:	// (loop lvl 2)
+//     if (usbMode == 1)
+	add B0,ONES,A0	// 'usbMode' != (-1) -> AT26
+	nop
+	jzc F18B27	// signed compare
+	nop
+// jumped away
+//     }
+//     {
+//       if (AudioBufFill () < 32)
+	call _AudioBufFill
+	nop
+// jumped away
+	sub A0,C1,A0	// ET13 >= ET14 -> AT29
+	nop
+	callge _Sleep
+	ldc F18B27,LR0
+// jumped away
+//       }
+//       {
+//         memset (tmpBuf, 0, sizeof (tmpBuf));
+	ldc 64,A0	// 64 -> A0
+	and NULL,NULL,A1	// 0 -> A1
+	call _memset
+	ldc _tmpBuf,I0	// I0
+// jumped away
+	ldx (I6)+1,NULL	// I6 += 1
+//         AudioOutputSamples (tmpBuf, sizeof (tmpBuf) / 2);
+	stx C1,(I6)+1	// ET14
+	call _AudioOutputSamples
+	stx B1,(I6)+1	// ET16
+// jumped away
+//       Sleep ();
+	call _Sleep
+	ldx (I6)-2,NULL	// I6 += -2
+// jumped away
+F18B27:	// (loop lvl 2)
+	call _USBIsAttached
+	ldx (I6)+1,NULL	// I6 += 1
+// jumped away
+	sub A0,NULL,A0	// ETe != (0) -> (0)
+	nop
+	callzc _USBHandler
+	ldc F18B9,LR0
+// jumped away
+F18B10:
+	ldc 65471,B0	// 65471 -> 1 -> ET19
+	ldc _hwSampleRate,I0	// ET18
+	sub NULL,ONES,A0 ; ldy (I6)+1,NULL	// I6 += 1
+//   hwSampleRate = 1;
+	sty A0,(I0)/*V*/	// ETd ==> ET18
+// (*(__x volatile u_int16 *)(u_int16)(0xC001)) &= ~(1<<6);
+	ldc 49153,I0	// 49153 -> ET1a
+	ldx (I0),A1/*V*/	// ET1a ==> ET1b
+	and A1,B0,A1	// ET1b and ET19 -> ET1c
+	stx A1,(I0)/*V*/	// ET1c ==> ET1a
+// (*(__x volatile u_int16 *)(u_int16)((0xC080U))) = 0x8000U;
+	ldc 32768,A1	// 32768 -> 1 -> ET1d
+	ldc 49280,I0	// 49280 -> ET1e
+	stx A1,(I0)/*V*/	// ET1d ==> ET1e
+//   map->Flush (map, 1);
+	ldc _map,I0	// ET1f
+	stx A0,(I6)+1	// ETd
+	ldx (I0),I0/*V*/	// ET1f ==> 'map'
+	stx I0,(I6) ; ldy (I0)+7,NULL	// 'map'
+	ldx (I0)+3,NULL	// ...
+	ldx (I0),A0/*V*/	// ET21 ==> 10 -> ET22
+	mv A0,LR0
+	jr
+	ldc lo(F18B32),LR0	// (return address)
+// jumped away
+F18B32:
+	ldc _voltages,A0	// ET2
+	ldx (I6)-1,NULL	// I6 += 1
+//   PowerSetVoltages (&voltages[voltCorePlayer]);
+	call _PowerSetVoltages
+	stx A0,(I6)	// ET2
+// jumped away
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,I2
+	ldy (I6),I0 ; ldx (I6)-1,D0
+	ldy (I6),C1 ; ldx (I6)-1,C0
+	ldy (I6),B1 ; ldx (I6)-1,B0
+	ldy (I6),A1 ; ldx (I6)-1,A0
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect code,main	// 164 words
+	.export _main
+_main:
+	ldx (I6)+1,NULL	// I6 += 1
+	stx LR0,(I6)
+// ;
+//   InitAudio ();
+	call _InitAudio
+	nop
+// jumped away
+//   GPIOInit ();
+	call _GPIOInit
+	nop
+// jumped away
+// (*(__x volatile u_int16 *)(u_int16)(0xC070)) =(1<< 5) |(1<< 6);
+	ldc 65471,A1	// 65471 -> 1 -> ET4
+	ldc 96,A0	// 96 -> 1 -> ET0
+	ldc 49264,I0	// 49264 -> ET1
+	stx A0,(I0)+2/*V*/ ; sub NULL,ONES,A0	// ET0 ==> ET1
+// (*(__x volatile u_int16 *)(u_int16)(0xC072)) =(1<< 0);
+	stx A0,(I0)/*V*/	// ET2 ==> ET3
+// (*(__x volatile u_int16 *)(u_int16)(0xC001)) &= ~(1<<6);
+	ldc 49153,I0	// 49153 -> ET5
+	ldx (I0),A0/*V*/	// ET5 ==> ET6
+	and A0,A1,A0	// ET6 and ET4 -> ET7
+	stx A0,(I0)/*V*/	// ET7 ==> ET5
+// (*(__x volatile u_int16 *)(u_int16)((0xC080U))) = 0x8000U;
+	ldc 32768,A0	// 32768 -> 1 -> ET8
+	ldc 49280,I0	// 49280 -> ET9
+	stx A0,(I0)/*V*/	// ET8 ==> ET9
+// (*(__x volatile u_int16 *)(u_int16)(0xC051)) |= 4 | 8;
+	ldc 12,A0	// 12 -> 1 -> ETa
+	ldc 49233,I0	// 49233 -> ETb
+	ldx (I0),A1/*V*/	// ETb ==> ETc
+	or A1,A0,A1	// ETc or ETa -> ETd
+	stx A1,(I0)-1/*V*/	// ETd ==> ETb
+// (*(__x volatile u_int16 *)(u_int16)(0xC050)) |= 4 | 8;
+	ldx (I0),A1/*V*/	// ETe ==> ETf
+	or A1,A0,A0	// ETf or ETa -> ET10
+	ldc 65523,A1	// 65523 -> 1 -> ET11
+	stx A0,(I0)/*V*/	// ET10 ==> ETe
+// (*(__x volatile u_int16 *)(u_int16)(0xC011)) &= ~(4 | 8);
+	ldc 49169,I0	// 49169 -> ET12
+	ldx (I0),A0/*V*/	// ET12 ==> ET13
+	and A0,A1,A0	// ET13 and ET11 -> ET14
+	stx A0,(I0)/*V*/ ; and NULL,NULL,A1	// ET14 ==> ET12
+//   player.volumeOffset = -24;
+	ldc -24,A0	// -24 -> 0 -> ET15
+	ldc _player+7,I0	// ET18
+	stx A0,(I0)-3	// ET15 ==> ET18
+//   player.pauseOn = 0;
+	ldc 256,A0	// 256 -> 1 -> ET1c
+	stx A1,(I0)	// ET19 ==> ET18
+//   keyOld = 256;
+	ldc _keyOld,I0	// ET1d
+	stx A0,(I0)/*V*/	// ET1c ==> ET1d
+//   keyOldTime = -32767;
+	ldc -32767,A0	// -32767 -> 0 -> ET1e
+	ldc _keyOldTime,I0	// ET1f
+	stx A0,(I0)/*V*/	// ET1e ==> ET1f
+//   SetHookFunction ((u_int16) OpenFile, Fat12OpenFile);
+	ldc _OpenFile,A0	// ET21
+	mv A0,I0	// ET21 -> I0
+	call _SetHookFunction
+	ldc _Fat12OpenFile,A0	// A0
+// jumped away
+//   SetHookFunction ((u_int16) IdleHook, GPIOCtrlIdleHook);
+	ldc _IdleHook,A0	// ET25
+	mv A0,I0	// ET25 -> I0
+	call _SetHookFunction
+	ldc _GPIOCtrlIdleHook,A0	// A0
+// jumped away
+	ldc _map,I0	// ET2a
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// I6 += 1
+//   map = FsMapSpiFlashCreate (0, 0);
+	stx A0,(I6)+1	// ET28
+	call _FsMapSpiFlashCreate
+	stx A1,(I6)	// ET19
+// jumped away
+	stx A0,(I0)/*V*/ ; ldy (I6)-2,NULL	// I6 += -2
+//   player.volume = 0;
+	ldc _player+6,I0	// ET2c
+//   PlayerVolume ();
+	call _PlayerVolume
+	stx A1,(I0)	// ET19 ==> ET2c
+// jumped away
+F19B12:
+//   }
+//   {
+//     if (USBIsAttached ())
+	call _USBIsAttached
+	ldx (I6)+1,NULL	// I6 += 1
+// jumped away
+	sub A0,NULL,A0	// ET2e != (0) -> (0)
+	nop
+	jzs F19B14	// unsigned compare
+	nop
+// jumped away
+// ;
+//     }
+//     {
+// ;
+//       MyMassStorage ();
+	call _MyMassStorage
+	ldx (I6)+1,NULL	// I6 += 1
+// jumped away
+F19B14:
+//     if (InitFileSystem () == 0)
+	call _InitFileSystem
+	ldx (I6)+1,NULL	// I6 += 1
+// jumped away
+	sub A0,NULL,A0	// ET2f == (0) -> (0)
+	ldc _cs,A0
+	jzc F19B24	// unsigned compare
+	nop
+// jumped away
+//     }
+//     {
+//       minifatInfo.supportedSuffixes = defSupportedFiles;
+	ldc 65535,C0	// 65535 -> C0
+	ldc _defSupportedFiles,A0	// ET30
+	ldc _minifatInfo+28,I0	// ET33
+//       player.totalFiles = OpenFile (0xffffU);
+	call _OpenFile
+	sty A0,(I0) ; ldx (I6)+1,NULL	// ET30 ==> ET33
+// jumped away
+	ldc _player,I0	// ET16
+	stx A0,(I0)+1 ; or NULL,ONES,A1	// ET35 ==> ET16
+//       player.currentFile = 0xffffU;
+	stx A1,(I0) ; sub A0,NULL,A0	// ET36 ==> ET16
+// ;
+// ;
+// ;
+//       if (player.totalFiles == 0)
+	ldc _cs,A0	// ET47
+	jzc F19B23	// signed compare
+	nop
+// jumped away
+F19B24:
+	ldc 32,B0	// 32 -> 0 -> ET41
+	ldx (I6)+1,NULL	// I6 += 1
+//       LoadCheck (&cs, 32);
+	stx B0,(I6)+1	// ET41
+	call _LoadCheck
+	stx A0,(I6)	// ET47
+// jumped away
+	ldc 64,A0	// 64 -> A0
+	ldc _tmpBuf,I0	// I0
+//       memset (tmpBuf, 0, sizeof (tmpBuf));
+	call _memset
+	ldx (I6)-2,NULL ; and NULL,NULL,A1	// I6 += -2
+// jumped away
+	ldc _tmpBuf,A0	// ET3f
+	ldx (I6)+1,NULL	// I6 += 1
+//       AudioOutputSamples (tmpBuf, sizeof (tmpBuf) / 2);
+	stx B0,(I6)+1	// ET41
+	call _AudioOutputSamples
+	stx A0,(I6)+1	// ET3f
+// jumped away
+	j F19B12
+	ldx (I6)-2,NULL	// I6 += -2
+// jumped away
+F19B23:
+//       player.nextStep = 1;
+	ldc _player+3,I0	// ET39
+	sub NULL,ONES,A0	// 1 -> 0 -> ET2d
+	stx A0,(I0)-1 ; and NULL,NULL,A0	// ET2d ==> ET39
+//       player.nextFile = 0;
+	stx A0,(I0)	// ET19 ==> ET39
+//       while (1)
+F19B28:
+//       }
+//       {
+//         GPIOCtrlIdleHook ();
+	call _GPIOCtrlIdleHook
+	nop
+// jumped away
+	ldc 65535,A0	// 65535 -> 1 -> ET34
+	ldc _player+1,I0	// ET37
+F19B33:
+	ldx (I0),A1	// ET37 ==> 1 -> ET3c
+	sub A1,A0,A1	// ET3c == ET34 -> AT5b
+	ldc _player+1,I0
+	jzc F19B31	// unsigned compare
+	ldc 64,A0	// 64 -> A0
+// jumped away
+//         }
+//         {
+//           memset (tmpBuf, 0, sizeof (tmpBuf));
+	and NULL,NULL,A1	// 0 -> A1
+	call _memset
+	ldc _tmpBuf,I0	// I0
+// jumped away
+	ldc 32,A0	// 32 -> 0 -> ET41
+	ldx (I6)+1,NULL	// I6 += 1
+//           AudioOutputSamples (tmpBuf, sizeof (tmpBuf) / 2);
+	stx A0,(I6)+1	// ET41
+	ldc _tmpBuf,A0	// ET3f
+	call _AudioOutputSamples
+	stx A0,(I6)+1	// ET3f
+// jumped away
+//           if (USBIsAttached ())
+	call _USBIsAttached
+	ldx (I6)-1,NULL	// I6 += -2
+// jumped away
+	sub A0,NULL,A0	// ET42 != (0) -> (0)
+	ldc 65535,A0
+	jzs F19B33	// unsigned compare
+	ldc _player+1,I0
+// jumped away
+//         if (player.currentFile < player.totalFiles && OpenFile (player.currentFile) < 0)
+F19B31:
+	ldx (I0)-1,C0	// ET37 ==> 1 -> ET3d
+	ldx (I0),A0	// ET37 ==> ET43
+	sub C0,A0,A1	// ET3d < ET43 -> AT5a
+	nop
+	jge F19B40	// signed compare
+	nop
+// jumped away
+	call _OpenFile
+	ldx (I6)+1,NULL	// I6 += 1
+// jumped away
+	sub A0,NULL,A0	// ET44 < (0) -> (0)
+	ldc _player+9,I0	// ET46
+	jge F19B40	// signed compare
+	and NULL,NULL,A0	// 0 -> 1 -> ET28
+// jumped away
+//         }
+//         {
+//           player.ffCount = 0;
+	ldc _minifatInfo+10,I2	// ET4b
+	stx A0,(I0) ; ldy (I2)-1,A1	// ET28 ==> ET46
+//           cs.cancel = 0;
+	ldc _cs+13,I0	// ET49
+	stx A0,(I0)-1	// ET19 ==> ET49
+//           cs.goTo = -1;
+	ldc 65535,A0	// 65535 -> 1 -> ET34
+	stx A0,(I0)-2 ; ldy (I2),A0	// ET34 ==> ET49
+//           cs.fileSize = cs.fileLeft = minifatInfo.fileSize;
+	stx A0,(I0)+1
+	stx A1,(I0)-3
+	stx A0,(I0)+1 ; sub NULL,ONES,A0
+	stx A1,(I0)-1
+//           cs.fastForward = 1;
+	ldc _cs+36,I0	// ET52
+// ;
+// ;
+// ;
+//           }
+// oldStep
+// ;
+// ;
+//             ret = PlayWavOrOggFile ();
+	call _PlayWavOrOggFile
+	stx A0,(I0)	// ET2 ==> ET52
+// jumped away
+//         if (USBIsAttached ())
+	call _USBIsAttached
+	ldx (I6)+1,NULL	// I6 += 1
+// jumped away
+	sub A0,NULL,A0	// ET55 != (0) -> (0)
+	nop
+	jzc F19B12	// unsigned compare
+	nop
+// jumped away
+	j F19B28
+	nop
+// jumped away
+F19B40:
+//         }
+//         else
+//         {
+//           player.currentFile = 0xffffU;
+	ldc _player+1,I0	// ET37
+	or NULL,ONES,A0	// -1 -> 0 -> ET36
+//           continue;
+	j F19B28
+	stx A0,(I0)	// ET36 ==> ET37
+// jumped away
+
+//_____________________________________________________________
+//
+	.sect data_x,const_x	// 88 words
+	.export _myVendorNameStr
+_myVendorNameStr:
+	.word 4099, 22016, 27648, 29440, 26880, 17920, 26880, 28160
+	.export _myModelNameStr
+_myModelNameStr:
+	.word 4611, 21248, 20480, 18688, 21248, 29696, 28416, 29184
+	.word 25856
+	.export _myDeviceDescriptor
+_myDeviceDescriptor:
+	.word 0x1201
+	.word 0x1001
+	.word "\000@"
+	.word 0xfb19
+	.word 0xe0ee
+	.word "\000"
+	.word 0x0102
+	.word 0x0301
+
+	.zero 1
+	.export _spiFlashMapper
+_spiFlashMapper:
+	.word 268, 256, lo(992), hi(992), 0, _FsMapSpiFlashCreate, _FsMapFlNullOk, _FsMapSpiFlashRead
+	.word _FsMapSpiFlashWrite, 0, _FsMapSpiFlashFlush, 0
+fatalerro_1:
+	.word "FATAL ERROR: NO CACHE SPACE. THIS NEVER HAPPENS."
+
+	.zero 1
+
+//_____________________________________________________________
+//
+	.sect data_x,init_x	// 15 words
+	.export _mySerialNumberStr
+_mySerialNumberStr:
+	.word 6659, 12288, 12288, 12288, 12288, 12288, 12288, 12288
+	.word 12288, 12288, 12288, 12288, 12544
+	.export _lastFoundBlock
+_lastFoundBlock:
+	.word -1
+	.export _shouldFlush
+_shouldFlush:
+	.word 0
+
+//_____________________________________________________________
+//
+	.sect data_x,bss_x	// 19 words
+	.export _blockPresent
+_blockPresent:
+	.bss 1
+	.export _blockAddress
+_blockAddress:
+	.bss 16
+
+	.end

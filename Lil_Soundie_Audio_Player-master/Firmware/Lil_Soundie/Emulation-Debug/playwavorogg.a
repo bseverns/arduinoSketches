@@ -1,0 +1,92 @@
+
+//_____________________________________________________________
+//
+	.sect code,PlayWavOrOggFile	// 58 words
+	.export _PlayWavOrOggFile
+_PlayWavOrOggFile:
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// I6 += 1
+	stx LR0,(I6)+1
+	stx I6,(I6) ; sty I4,(I6)
+	ldx (I6)+2,I4
+	stx A1,(I6) ; sty I0,(I6)+1
+	stx I2,(I6)+1
+// ret
+// (0, 0);
+	stx A0,(I6)+1	// ET1
+	call _LoadCheck
+	stx A0,(I6)	// ET1
+// jumped away
+//     if ((cod = CodMicroWavCreate ()))
+	call _CodMicroWavCreate
+	ldx (I6)-2,NULL	// I6 += -2
+// jumped away
+	mv A0,I2	// A0 -> ET2
+	mv I2,A0	// ET2 -> 'cod'
+	ldc _cod,I0	// ET3
+	stx I2,(I0)/*V*/ ; sub A0,NULL,A0	// ET2 ==> ET3
+	nop	// 'cod' != (0) -> (0)
+	jzc F0B4	// signed compare
+	nop
+// jumped away
+F0B5:
+//   return PatchPlayCurrentFile ();
+	call _PatchPlayCurrentFile
+	nop
+// jumped away
+F0B1:
+	ldx (I6)-1,I2
+	ldy (I6),I0 ; ldx (I6)-1,A1
+	ldx (I4),I6 ; ldy (I4),I4
+	ldx (I6)-1,NULL	// I6 += -1
+	ldx (I6)-1,LR0
+	jr
+	nop
+// jumped away
+F0B4:
+	ldc _cs,A0	// ET5
+	ldx (I4)+1,NULL ; ldy (I6)+1,NULL	// I4 += 1
+//   }
+//   {
+//     ret = cod->Decode (cod, &cs, &eStr);
+	stx I4,(I6)+1 ; ldy (I4)-1,NULL	// ET4
+	stx A0,(I6)+1	// ET5
+	stx I2,(I6) ; ldy (I2)+2,NULL	// ET2
+	ldx (I2),A0	// ET2 ==> 2 -> ET8
+	mv A0,LR0
+	jr
+	ldc lo(F0B7),LR0	// (return address)
+// jumped away
+F0B7:
+	ldy (I6)-2,NULL ; ldx (I0),I0/*V*/	// I6 += 1
+//     cod->Delete (cod);
+	stx I0,(I6) ; ldy (I0)+3,NULL	// 'cod'
+	ldx (I0),A1/*V*/	// ETb ==> 3 -> ETc
+	mv A1,LR0
+	jr
+	ldc lo(F0B8),LR0	// (return address)
+// jumped away
+F0B8:
+	ldx (I6)-1,NULL ; add A0,ONES,A1	// I6 += -1
+//     if (ret != ceFormatNotFound)
+	ldc _cs+3,I0	// ETe
+	jzc F0B1	// signed compare
+	nop
+// jumped away
+	ldx (I6)+1,NULL ; and NULL,NULL,A0	// I6 += 1
+//     cs.Seek (&cs, 0,0);
+	stx A0,(I6)+1 ; and A,NULL,A	// ET1
+	stx A0,(I6)+1	// A0
+	ldc _cs,A0	// ET5
+	stx A1,(I6)+1	// A1
+	stx A0,(I6)	// ET5
+	ldx (I0),A0	// ETe ==> 3 -> ETf
+	mv A0,LR0
+	jr
+	ldc lo(F0B11),LR0	// (return address)
+// jumped away
+F0B11:
+	j F0B5
+	ldx (I6)-4,NULL	// I6 += -4
+// jumped away
+
+	.end
